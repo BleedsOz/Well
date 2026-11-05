@@ -115,7 +115,7 @@ function seed() {
 
   const templates = [{
     id: "tpl-1", name: "Μεσογειακό 1.900 kcal (3 ημέρες)", kcal: 1900, protein: 120, carbs: 200, fat: 65, plan_days: 3,
-    meals: meals.map(({ day, slot, items, title, recipe, photo_url }) => ({ day, slot, items, title, recipe, photo_url })),
+    meals: meals.map(({ day, slot, items, title, recipe, photo_url, recipe_url }) => ({ day, slot, items, title, recipe, photo_url, recipe_url })),
   }];
 
   return {
@@ -257,7 +257,7 @@ export function createDemoApi() {
       requireAdmin();
       const db = load();
       let row = db.meals.find((m) => m.client_id === meal.client_id && m.day === meal.day && m.slot === meal.slot);
-      const fields = { items: meal.items, title: meal.title ?? "", recipe: meal.recipe ?? "", photo_url: meal.photo_url ?? "" };
+      const fields = { items: meal.items, title: meal.title ?? "", recipe: meal.recipe ?? "", photo_url: meal.photo_url ?? "", recipe_url: meal.recipe_url ?? "" };
       if (row) Object.assign(row, fields);
       else db.meals.push((row = { id: uid(), client_id: meal.client_id, day: meal.day, slot: meal.slot, ...fields }));
       save(db);
@@ -272,7 +272,7 @@ export function createDemoApi() {
       db.selections.forEach((s) => { if (s.client_id === clientId && !ids.has(s.meal_id)) s.meal_id = null; });
       const rows = meals.map((m) => ({
         id: uid(), client_id: clientId, day: m.day, slot: m.slot, items: m.items || [],
-        title: m.title ?? "", recipe: m.recipe ?? "", photo_url: m.photo_url ?? "",
+        title: m.title ?? "", recipe: m.recipe ?? "", photo_url: m.photo_url ?? "", recipe_url: m.recipe_url ?? "",
       }));
       db.meals.push(...rows);
       save(db);

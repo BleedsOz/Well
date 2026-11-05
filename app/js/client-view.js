@@ -8,6 +8,7 @@ import { progressSection } from "./progress.js";
 import { printPlan, printShopping } from "./print.js";
 
 const WATER_GLASS = 250; // ml
+const safeUrl = (u) => { try { const x = new URL(u); return /^https?:$/.test(x.protocol) ? x.href : null; } catch { return null; } };
 const WATER_GOAL = 2000; // ml
 
 export async function mountClient(root, api, profile) {
@@ -170,7 +171,9 @@ export async function mountClient(root, api, profile) {
   function openRecipe(meal) {
     modal(meal.title || "Συνταγή", h("div", { class: "recipe" },
       meal.photo_url ? h("img", { src: meal.photo_url, alt: meal.title || "", class: "recipe__img" }) : null,
-      meal.recipe ? h("p", { class: "recipe__text" }, meal.recipe) : null));
+      meal.recipe ? h("p", { class: "recipe__text" }, meal.recipe) : null,
+      safeUrl(meal.recipe_url) ? h("a", { class: "btn btn--small", href: safeUrl(meal.recipe_url), target: "_blank", rel: "noopener noreferrer" },
+        `Δες τη συνταγή στο ${new URL(safeUrl(meal.recipe_url)).hostname.replace(/^www\./, "")} ↗`) : null));
   }
 
   // ───────────── Σήμερα ─────────────
@@ -203,7 +206,7 @@ export async function mountClient(root, api, profile) {
     const mac = itemsMacros(sel.items, state.foods);
     const src = sourceLabel(sel, key);
     const meal = sel.meal_id && mealById(sel.meal_id);
-    const hasRecipe = meal && (meal.recipe || meal.photo_url);
+    const hasRecipe = meal && (meal.recipe || meal.photo_url || safeUrl(meal.recipe_url));
     return h("article", { class: "meal" + (sel.done ? " meal--done" : "") },
       h("header", { class: "meal__head" },
         h("div", {},

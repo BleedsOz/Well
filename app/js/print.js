@@ -61,7 +61,7 @@ export function printPlan({ client, meals, foodsById }) {
   }
 
   const recipes = meals
-    .filter((m) => m.recipe || m.photo_url)
+    .filter((m) => m.recipe || m.photo_url || m.recipe_url)
     .sort((a, b) => a.day - b.day || SLOTS.findIndex((s) => s.key === a.slot) - SLOTS.findIndex((s) => s.key === b.slot));
 
   printNodes(`Πρόγραμμα διατροφής — ${client.full_name || client.email || ""}`, [
@@ -73,7 +73,8 @@ export function printPlan({ client, meals, foodsById }) {
       recipes.map((m) => h("article", { class: "print-recipe" },
         h("h3", {}, m.title || `${SLOTS.find((s) => s.key === m.slot)?.label} · Ημέρα ${m.day}`),
         m.photo_url ? h("img", { src: m.photo_url, alt: "" }) : null,
-        h("p", {}, m.recipe)))) : null,
+        m.recipe ? h("p", {}, m.recipe) : null,
+        m.recipe_url ? h("p", { class: "print-link" }, `Συνταγή: ${m.recipe_url}`) : null))) : null,
     h("p", { class: "print-foot" }, `Εκτυπώθηκε ${new Date().toLocaleDateString("el-GR")}`),
   ]);
 }

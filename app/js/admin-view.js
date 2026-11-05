@@ -68,10 +68,10 @@ export async function mountAdmin(root, api) {
   /** Αλλάζει πεδία ενός γεύματος (items, title, recipe, photo_url) και αποθηκεύει. */
   function setMeal(day, slot, patch, { rerender = true } = {}) {
     let m = mealOf(day, slot);
-    if (!m) state.meals.push((m = { client_id: state.clientId, day, slot, items: [], title: "", recipe: "", photo_url: "" }));
+    if (!m) state.meals.push((m = { client_id: state.clientId, day, slot, items: [], title: "", recipe: "", photo_url: "", recipe_url: "" }));
     Object.assign(m, patch);
     saveMeal(`${state.clientId}-${day}-${slot}`, {
-      client_id: state.clientId, day, slot, items: m.items, title: m.title || "", recipe: m.recipe || "", photo_url: m.photo_url || "",
+      client_id: state.clientId, day, slot, items: m.items, title: m.title || "", recipe: m.recipe || "", photo_url: m.photo_url || "", recipe_url: m.recipe_url || "",
     });
     if (rerender) render();
   }
@@ -208,7 +208,16 @@ export async function mountAdmin(root, api) {
       },
     });
     return h("div", { class: "recipe-edit" },
-      h("label", { class: "field" }, h("span", {}, "Οδηγίες / συνταγή"),
+      h("label", { class: "field" }, h("span", {}, "Σύνδεσμος συνταγής (π.χ. από site συνταγών)"),
+        h("input", {
+          type: "url", placeholder: "https://…", value: meal?.recipe_url || "",
+          onchange: (e) => {
+            const v = e.target.value.trim();
+            if (v && !/^https?:\/\//i.test(v)) return toast("Ο σύνδεσμος πρέπει να ξεκινά με https://", "error");
+            setMeal(day, key, { recipe_url: v }, { rerender: false });
+          },
+        })),
+      h("label", { class: "field" }, h("span", {}, "Οδηγίες / συνταγή (δικό σου κείμενο)"),
         h("textarea", {
           rows: 4, placeholder: "Υλικά, τρόπος παρασκευής…",
           oninput: (e) => setMeal(day, key, { recipe: e.target.value }, { rerender: false }),
@@ -257,7 +266,7 @@ export async function mountAdmin(root, api) {
       h("button", {
         class: "link-btn recipe-toggle", "aria-expanded": String(open),
         onclick: () => { state.openRecipe = open ? null : rk; render(); },
-      }, open ? "Κλείσιμο συνταγής" : meal?.recipe || meal?.photo_url ? "Συνταγή ✓ (επεξεργασία)" : "+ Συνταγή & φωτογραφία"),
+      }, open ? "Κλείσιμο συνταγής" : meal?.recipe || meal?.photo_url || meal?.recipe_url ? "Συνταγή ✓ (επεξεργασία)" : "+ Συνταγή & φωτογραφία"),
       open ? recipeEditor(day, key, meal) : null);
   }
 
@@ -265,8 +274,8 @@ export async function mountAdmin(root, api) {
     const name = prompt("Όνομα προτύπου:", `${c.kcal ? fmt(c.kcal) + " kcal · " : ""}${c.plan_days || 7} ημέρες`);
     if (!name) return;
     const meals = state.meals
-      .filter((m) => m.day <= (c.plan_days || 7) && (m.items?.length || m.recipe || m.title))
-      .map(({ day, slot, items, title, recipe, photo_url }) => ({ day, slot, items, title: title || "", recipe: recipe || "", photo_url: photo_url || "" }));
+      .filter((m) => m.day <= (c.plan_days || 7) && (m.items?.length || m.recipe || m.title || m.recipe_url))
+      .map(({ day, slot, items, title, recipe, photo_url, recipe_url }) => ({ day, slot, items, title: title || "", recipe: recipe || "", photo_url: photo_url || "", recipe_url: recipe_url || "" }));
     api.saveTemplate({ name, kcal: c.kcal, protein: c.protein, carbs: c.carbs, fat: c.fat, plan_days: c.plan_days || 7, meals })
       .then((t) => { state.templates.push(t); toast(`Αποθηκεύτηκε το πρότυπο «${name}»`); })
       .catch((e) => toast(e.message, "error"));
@@ -318,7 +327,7 @@ export async function mountAdmin(root, api) {
     const copyFrom = (src) => {
       for (const s of SLOTS) {
         const m = mealOf(src, s.key);
-        setMeal(day, s.key, { items: structuredClone(m?.items ?? []), title: m?.title || "", recipe: m?.recipe || "", photo_url: m?.photo_url || "" }, { rerender: false });
+        setMeal(day, s.key, { items: structuredClone(m?.items ?? []), title: m?.title || "", recipe: m?.recipe || "", photo_url: m?.photo_url || "", recipe_url: m?.recipe_url || "" }, { rerender: false });
       }
       render();
       toast(`Αντιγράφηκε η Ημέρα ${src} στην Ημέρα ${day}`);

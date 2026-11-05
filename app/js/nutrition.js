@@ -102,3 +102,112 @@ export function prettyDate(dateStr) {
 
 /** kcal από μακροθρεπτικά (4/4/9). */
 export const kcalFromMacros = (p, c, f) => (p || 0) * 4 + (c || 0) * 4 + (f || 0) * 9;
+
+// ───────────── Ισοδύναμα τρόφιμα ─────────────
+
+/**
+ * Πόσο από το toFood δίνει τις ίδιες θερμίδες (by='kcal') ή την ίδια πρωτεΐνη (by='protein')
+ * με fromAmount από το fromFood. Αν η πρωτεΐνη του στόχου είναι ~0, γυρνά σε θερμίδες.
+ */
+export function equivalentAmount(fromFood, fromAmount, toFood, by = "kcal") {
+  const src = itemMacros(fromFood, fromAmount);
+  let key = by;
+  if (key === "protein" && (!(toFood.protein > 0) || !(src.protein > 0))) key = "kcal";
+  const perUnit = toFood.unit === "piece" ? toFood[key] : toFood[key] / 100;
+  if (!(perUnit > 0)) return roundAmount(fromAmount, toFood);
+  const raw = src[key] / perUnit;
+  const r = roundAmount(raw, toFood);
+  return r === 0 && raw > 0 ? stepFor(toFood) : r;
+}
+
+// ───────────── Πρόταση θερμίδων ─────────────
+
+export const ACTIVITY_LEVELS = [
+  { value: 1.2, label: "Καθιστική ζωή" },
+  { value: 1.375, label: "Ελαφριά (1–3 φορές/εβδ.)" },
+  { value: 1.55, label: "Μέτρια (3–5 φορές/εβδ.)" },
+  { value: 1.725, label: "Έντονη (6–7 φορές/εβδ.)" },
+  { value: 1.9, label: "Πολύ έντονη / αθλητής" },
+];
+export const GOALS = [
+  { value: "lose", label: "Απώλεια βάρους", factor: 0.85, proteinPerKg: 1.8 },
+  { value: "maintain", label: "Διατήρηση", factor: 1, proteinPerKg: 1.4 },
+  { value: "gain", label: "Αύξηση μυϊκής μάζας", factor: 1.1, proteinPerKg: 1.8 },
+];
+
+/** Mifflin-St Jeor BMR. */
+export function mifflinBMR({ sex, weight, height, age }) {
+  if (!weight || !height || !age || !sex) return null;
+  return 10 * weight + 6.25 * height - 5 * age + (sex === "male" ? 5 : -161);
+}
+
+/** Katch-McArdle BMR από άλιπη μάζα (όταν υπάρχει λιπομέτρηση). */
+export function katchBMR({ weight, fatPct }) {
+  if (!weight || !fatPct) return null;
+  return 370 + 21.6 * weight * (1 - fatPct / 100);
+}
+
+/**
+ * Πρόταση στόχων. Επιστρέφει { bmr, tdee, kcal, protein, carbs, fat, method } ή null.
+ * Λιπαρά 30% των θερμίδων, πρωτεΐνη ανά kg ανάλογα με τον στόχο, υδατάνθρακες το υπόλοιπο.
+ */
+export function suggestTargets({ sex, weight, height, age, activity = 1.375, goal = "maintain", fatPct }) {
+  const katch = katchBMR({ weight, fatPct });
+  const bmr = katch ?? mifflinBMR({ sex, weight, height, age });
+  if (!bmr) return null;
+  const g = GOALS.find((x) => x.value === goal) || GOALS[1];
+  const tdee = bmr * (activity || 1.375);
+  const kcal = Math.round((tdee * g.factor) / 10) * 10;
+  const protein = Math.round(weight * g.proteinPerKg);
+  const fat = Math.round((kcal * 0.3) / 9);
+  const carbs = Math.max(0, Math.round((kcal - protein * 4 - fat * 9) / 4));
+  return {
+    bmr: Math.round(bmr), tdee: Math.round(tdee), kcal, protein, carbs, fat,
+    method: katch ? "Katch-McArdle (από λιπομέτρηση)" : "Mifflin-St Jeor",
+  };
+}
+
+// ───────────── Λίστα για ψώνια ─────────────
+
+/** lists: πίνακας από πίνακες items. Επιστρέφει [{ food, amount }] ταξινομημένα ανά κατηγορία/όνομα. */
+export function shoppingList(lists, foodsById) {
+  const totals = new Map();
+  for (const items of lists)
+    for (const it of items || []) {
+      if (!(it.amount > 0)) continue;
+      totals.set(it.food_id, (totals.get(it.food_id) || 0) + it.amount);
+    }
+  return [...totals]
+    .map(([id, amount]) => ({ food: foodsById.get(id), amount }))
+    .filter((x) => x.food)
+    .sort((a, b) =>
+      (a.food.category || "~").localeCompare(b.food.category || "~", "el") ||
+      a.food.name.localeCompare(b.food.name, "el"));
+}
+
+export function formatAmount(food, amount) {
+  if (food.unit === "piece") return `${fmt(amount, 1)} τεμ.`;
+  return amount >= 1000 ? `${fmt(amount / 1000, 2)} kg` : `${fmt(amount)} g`;
+}
+
+// ───────────── Μετρήσεις σώματος ─────────────
+
+export const METRICS = [
+  { key: "weight", label: "Βάρος", unit: "kg", digits: 1 },
+  { key: "fat_pct", label: "Λίπος", unit: "%", digits: 1 },
+  { key: "fat_kg", label: "Λιπώδης μάζα", unit: "kg", digits: 1 },
+  { key: "muscle_kg", label: "Μυϊκή μάζα", unit: "kg", digits: 1 },
+  { key: "water_pct", label: "Νερό σώματος", unit: "%", digits: 1 },
+  { key: "visceral_fat", label: "Σπλαχνικό λίπος", unit: "", digits: 1 },
+  { key: "bone_kg", label: "Οστική μάζα", unit: "kg", digits: 1 },
+  { key: "bmr", label: "Βασικός μεταβολισμός", unit: "kcal", digits: 0 },
+  { key: "metabolic_age", label: "Μεταβολική ηλικία", unit: "έτη", digits: 0 },
+  { key: "bmi", label: "ΔΜΣ (BMI)", unit: "", digits: 1 },
+  { key: "waist_cm", label: "Περιφέρεια μέσης", unit: "cm", digits: 1 },
+  { key: "hip_cm", label: "Περιφέρεια γοφών", unit: "cm", digits: 1 },
+];
+
+export function startOfWeek(dateStr) {
+  const d = new Date(dateStr + "T12:00:00");
+  return addDays(dateStr, -((d.getDay() + 6) % 7));
+}

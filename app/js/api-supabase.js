@@ -95,11 +95,73 @@ export async function createSupabaseApi({ url, anonKey }) {
         day: meal.day,
         slot: meal.slot,
         items: meal.items,
+        title: meal.title ?? "",
+        recipe: meal.recipe ?? "",
+        photo_url: meal.photo_url ?? "",
         updated_at: new Date().toISOString(),
       };
       return check(
         await sb.from("meals").upsert(row, { onConflict: "client_id,day,slot" }).select().single()
       );
+    },
+
+    async replaceMeals(clientId, meals) {
+      check(await sb.from("meals").delete().eq("client_id", clientId));
+      if (!meals.length) return [];
+      const rows = meals.map((m) => ({
+        client_id: clientId, day: m.day, slot: m.slot, items: m.items || [],
+        title: m.title ?? "", recipe: m.recipe ?? "", photo_url: m.photo_url ?? "",
+      }));
+      return check(await sb.from("meals").insert(rows).select());
+    },
+
+    async uploadPhoto(blob) {
+      const path = `${crypto.randomUUID()}.jpg`;
+      const { error } = await sb.storage.from("recipes").upload(path, blob, { contentType: "image/jpeg" });
+      if (error) throw new Error(error.message);
+      return sb.storage.from("recipes").getPublicUrl(path).data.publicUrl;
+    },
+
+    async listMeasurements(clientId) {
+      return check(await sb.from("measurements").select("*").eq("client_id", clientId).order("date"));
+    },
+
+    async saveMeasurement(m) {
+      const { id, created_at, ...rest } = m;
+      const q = id ? sb.from("measurements").update(rest).eq("id", id) : sb.from("measurements").insert(rest);
+      return check(await q.select().single());
+    },
+
+    async importMeasurements(rows) {
+      if (!rows.length) return [];
+      return check(await sb.from("measurements").insert(rows).select());
+    },
+
+    async deleteMeasurement(id) {
+      check(await sb.from("measurements").delete().eq("id", id));
+    },
+
+    async listDayLogs(clientId, from, to) {
+      return check(await sb.from("day_logs").select("*").eq("client_id", clientId).gte("date", from).lte("date", to));
+    },
+
+    async saveDayLog(log) {
+      const row = { ...log, updated_at: new Date().toISOString() };
+      return check(await sb.from("day_logs").upsert(row, { onConflict: "client_id,date" }).select().single());
+    },
+
+    async listTemplates() {
+      return check(await sb.from("templates").select("*").order("name"));
+    },
+
+    async saveTemplate(t) {
+      const { id, created_at, ...rest } = t;
+      const q = id ? sb.from("templates").update(rest).eq("id", id) : sb.from("templates").insert(rest);
+      return check(await q.select().single());
+    },
+
+    async deleteTemplate(id) {
+      check(await sb.from("templates").delete().eq("id", id));
     },
 
     async listSelections(clientId, from, to) {

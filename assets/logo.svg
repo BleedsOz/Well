@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 100" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+  <!-- head -->
+  <circle cx="60" cy="14" r="6"/>
+  <!-- raised arms -->
+  <path d="M36 10 C44 26 52 30 60 30 C68 30 76 26 84 10"/>
+  <!-- leaf (left) -->
+  <path d="M58 40 C40 34 22 44 22 64 C22 80 36 90 50 86 C60 82 62 66 58 40 Z"/>
+  <path d="M56 46 C46 58 40 70 36 84"/>
+  <!-- heart (right) -->
+  <path d="M62 42 C74 32 98 36 98 56 C98 72 82 82 66 90 C64 76 62 60 62 42 Z"/>
+</svg>

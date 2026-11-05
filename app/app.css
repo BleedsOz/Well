@@ -363,5 +363,3 @@
   .daybar > .row .dayselect select { flex: 1; min-width: 0; }
   .daybar > .row .btn { width: 100%; }
 }
-.recipe .btn { margin-top: 1rem; text-decoration: none; }
-@media print { .print-link { font-size: 8.5pt; color: #555; word-break: break-all; } }

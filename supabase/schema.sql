@@ -72,7 +72,6 @@ alter table public.foods add column if not exists category text not null default
 alter table public.meals add column if not exists title     text not null default '';
 alter table public.meals add column if not exists recipe    text not null default '';
 alter table public.meals add column if not exists photo_url text not null default '';
-alter table public.meals add column if not exists recipe_url text not null default '';
 
 -- Μετρήσεις σώματος (λιπομέτρηση ή καταγραφή από τον πελάτη)
 create table if not exists public.measurements (

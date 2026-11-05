@@ -98,7 +98,6 @@ export async function createSupabaseApi({ url, anonKey }) {
         title: meal.title ?? "",
         recipe: meal.recipe ?? "",
         photo_url: meal.photo_url ?? "",
-        recipe_url: meal.recipe_url ?? "",
         updated_at: new Date().toISOString(),
       };
       return check(
@@ -111,7 +110,7 @@ export async function createSupabaseApi({ url, anonKey }) {
       if (!meals.length) return [];
       const rows = meals.map((m) => ({
         client_id: clientId, day: m.day, slot: m.slot, items: m.items || [],
-        title: m.title ?? "", recipe: m.recipe ?? "", photo_url: m.photo_url ?? "", recipe_url: m.recipe_url ?? "",
+        title: m.title ?? "", recipe: m.recipe ?? "", photo_url: m.photo_url ?? "",
       }));
       return check(await sb.from("meals").insert(rows).select());
     },
